@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>FlClash 链式代理配置生成器</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0f1115;
+    --panel: #181b22;
+    --panel-2: #1f232c;
+    --border: #2a2f3a;
+    --text: #e6e8ec;
+    --text-dim: #9aa3b2;
+    --accent: #4f8cff;
+    --accent-hover: #6aa0ff;
+    --success: #3ecf8e;
+    --warn: #f5a623;
+    --danger: #ef4444;
+    --code-bg: #0b0d12;
+  }
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 20px 16px 60px;
+  }
+  header {
+    margin-bottom: 20px;
+  }
+  header h1 {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  header p {
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+  .privacy-note {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 4px 10px;
+    background: rgba(62, 207, 142, 0.1);
+    color: var(--success);
+    border: 1px solid rgba(62, 207, 142, 0.3);
+    border-radius: 4px;
+    font-size: 12px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 720px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .panel h2 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: 500;
+  }
+  .badge-relay { background: rgba(79, 140, 255, 0.15); color: var(--accent); }
+  .badge-exit  { background: rgba(245, 166, 35, 0.15); color: var(--warn); }
+  .field {
+    margin-bottom: 10px;
+  }
+  .field label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+  .field input, .field select {
+    width: 100%;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 10px;
+    border-radius: 5px;
+    font-size: 13px;
+    font-family: inherit;
+    -webkit-appearance: none;
+  }
+  .field input:focus, .field select:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .actions {
+    display: flex;
+    gap: 8px;
+    margin: 16px 0;
+    flex-wrap: wrap;
+  }
+  button {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s;
+  }
+  button:hover { background: var(--accent-hover); }
+  button.secondary {
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  button.secondary:hover { background: var(--border); }
+  button:active { transform: translateY(1px); }
+  .output-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .output-panel h2 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 12px;
+    overflow-x: auto;
+    font-family: "SF Mono", Menlo, Consolas, "Courier New", monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #d8dde6;
+    max-height: 480px;
+    overflow-y: auto;
+  }
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--success);
+    color: white;
+    padding: 10px 18px;
+    border-radius: 6px;
+    font-size: 13px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 100;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .toast.error { background: var(--danger); }
+  .hint {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>FlClash 链式代理配置生成器</h1>
+    <p>生成 Clash Meta 兼容的 YAML 配置，中转节点 → 落地节点链式代理</p>
+    <span class="privacy-note">🔒 纯前端运行，数据不会上传任何服务器</span>
+  </header>
+
+  <div class="grid">
+    <!-- 中转节点 -->
+    <div class="panel">
+      <h2><span class="badge badge-relay">中转</span> 中转节点（Relay）</h2>
+      <div class="field">
+        <label>节点名称</label>
+        <input id="r_name" type="text" value="relay-node" placeholder="relay-node">
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>服务器地址 server</label>
+          <input id="r_server" type="text" placeholder="relay.example.com">
+        </div>
+        <div class="field">
+          <label>端口 port</label>
+          <input id="r_port" type="number" value="443" placeholder="443">
+        </div>
+      </div>
+      <div class="field">
+        <label>UUID</label>
+        <input id="r_uuid" type="text" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>协议类型</label>
+          <select id="r_type">
+            <option value="vless" selected>vless</option>
+            <option value="vmess">vmess</option>
+            <option value="trojan">trojan</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>传输方式 network</label>
+          <select id="r_network">
+            <option value="tcp" selected>tcp</option>
+            <option value="ws">ws</option>
+            <option value="grpc">grpc</option>
+            <option value="h2">h2</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>flow（可留空）</label>
+        <input id="r_flow" type="text" value="xtls-rprx-vision" placeholder="xtls-rprx-vision">
+      </div>
+      <div class="field">
+        <label>SNI / servername</label>
+        <input id="r_sni" type="text" placeholder="www.microsoft.com">
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Public Key</label>
+          <input id="r_pbk" type="text" placeholder="Reality public-key">
+        </div>
+        <div class="field">
+          <label>Short ID</label>
+          <input id="r_sid" type="text" placeholder="0123abcd">
+        </div>
+      </div>
+    </div>
+
+    <!-- 落地节点 -->
+    <div class="panel">
+      <h2><span class="badge badge-exit">落地</span> 落地节点（Exit）</h2>
+      <div class="field">
+        <label>节点名称</label>
+        <input id="e_name" type="text" value="exit-node" placeholder="exit-node">
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>服务器地址 server</label>
+          <input id="e_server" type="text" placeholder="exit.example.com">
+        </div>
+        <div class="field">
+          <label>端口 port</label>
+          <input id="e_port" type="number" value="443" placeholder="443">
+        </div>
+      </div>
+      <div class="field">
+        <label>UUID</label>
+        <input id="e_uuid" type="text" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>协议类型</label>
+          <select id="e_type">
+            <option value="vless" selected>vless</option>
+            <option value="vmess">vmess</option>
+            <option value="trojan">trojan</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>传输方式 network</label>
+          <select id="e_network">
+            <option value="tcp" selected>tcp</option>
+            <option value="ws">ws</option>
+            <option value="grpc">grpc</option>
+            <option value="h2">h2</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>flow（落地节点会自动忽略）</label>
+        <input id="e_flow" type="text" value="" placeholder="留空，链式转发不需要 vision">
+        <div class="hint">⚠️ 链式代理时落地节点的 flow 会被自动清空，避免与隧道冲突</div>
+      </div>
+      <div class="field">
+        <label>SNI / servername</label>
+        <input id="e_sni" type="text" placeholder="www.cloudflare.com">
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Public Key</label>
+          <input id="e_pbk" type="text" placeholder="Reality public-key">
+        </div>
+        <div class="field">
+          <label>Short ID</label>
+          <input id="e_sid" type="text" placeholder="0123abcd">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button onclick="generate()">生成配置</button>
+    <button class="secondary" onclick="copyYaml()">📋 复制到剪贴板</button>
+    <button class="secondary" onclick="downloadYaml()">⬇️ 下载 .yaml</button>
+  </div>
+
+  <div class="output-panel">
+    <h2>生成的 YAML 配置</h2>
+    <pre id="output">点击「生成配置」按钮后此处显示 YAML…</pre>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+function val(id) {
+  return document.getElementById(id).value.trim();
+}
+
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  setTimeout(() => { t.className = 'toast'; }, 1800);
+}
+
+function buildProxy(prefix, isExit, relayName) {
+  const name = val(prefix + 'name');
+  const server = val(prefix + 'server');
+  const port = val(prefix + 'port');
+  const uuid = val(prefix + 'uuid');
+  const type = val(prefix + 'type');
+  const network = val(prefix + 'network');
+  const flow = val(prefix + 'flow');
+  const sni = val(prefix + 'sni');
+  const pbk = val(prefix + 'pbk');
+  const sid = val(prefix + 'sid');
+
+  if (!name || !server || !port) {
+    throw new Error((isExit ? '落地' : '中转') + '节点：名称、服务器、端口为必填项');
+  }
+
+  const lines = [];
+  lines.push(`  - name: "${name}"`);
+  lines.push(`    type: ${type}`);
+  lines.push(`    server: ${server}`);
+  lines.push(`    port: ${port}`);
+  if (uuid) {
+    if (type === 'trojan') {
+      lines.push(`    password: ${uuid}`);
+    } else {
+      lines.push(`    uuid: ${uuid}`);
+    }
+  }
+  if (type === 'vless') {
+    // 落地节点强制清空 flow
+    if (!isExit && flow) {
+      lines.push(`    flow: ${flow}`);
+    }
+  }
+  if (type === 'vmess') {
+    lines.push(`    alterId: 0`);
+    lines.push(`    cipher: auto`);
+  }
+  lines.push(`    network: ${network}`);
+  lines.push(`    udp: true`);
+  lines.push(`    tls: true`);
+  if (sni) lines.push(`    servername: ${sni}`);
+
+  // Reality
+  if (pbk) {
+    lines.push(`    client-fingerprint: chrome`);
+    lines.push(`    reality-opts:`);
+    lines.push(`      public-key: ${pbk}`);
+    if (sid) lines.push(`      short-id: ${sid}`);
+  }
+
+  // 链式代理：落地节点指向中转
+  if (isExit && relayName) {
+    lines.push(`    dialer-proxy: "${relayName}"`);
+  }
+
+  return { name, yaml: lines.join('\n') };
+}
+
+function buildYaml() {
+  const relay = buildProxy('r_', false, null);
+  const exit = buildProxy('e_', true, relay.name);
+
+  if (relay.name === exit.name) {
+    throw new Error('中转节点与落地节点名称不能相同');
+  }
+
+  const yaml = `# FlClash / Clash Meta 链式代理配置
+# 由 FlClash 链式代理配置生成器 生成
+# 链路：客户端 → ${relay.name}（中转）→ ${exit.name}（落地）→ 目标网站
+
+mixed-port: 7890
+allow-lan: false
+mode: rule
+log-level: info
+ipv6: false
+
+dns:
+  enable: true
+  listen: 0.0.0.0:1053
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+  fallback:
+    - https://1.1.1.1/dns-query
+    - https://dns.google/dns-query
+
+proxies:
+${relay.yaml}
+${exit.yaml}
+
+proxy-groups:
+  - name: "🚀 节点选择"
+    type: select
+    proxies:
+      - "${exit.name}"
+      - "${relay.name}"
+      - DIRECT
+
+  - name: "🔗 链式出口"
+    type: select
+    proxies:
+      - "${exit.name}"
+
+  - name: "🌍 国外流量"
+    type: select
+    proxies:
+      - "🚀 节点选择"
+      - DIRECT
+
+  - name: "🐟 漏网之鱼"
+    type: select
+    proxies:
+      - "🚀 节点选择"
+      - DIRECT
+
+rules:
+  - DOMAIN-SUFFIX,local,DIRECT
+  - IP-CIDR,127.0.0.0/8,DIRECT
+  - IP-CIDR,172.16.0.0/12,DIRECT
+  - IP-CIDR,192.168.0.0/16,DIRECT
+  - IP-CIDR,10.0.0.0/8,DIRECT
+  - GEOIP,CN,DIRECT
+  - DOMAIN-SUFFIX,cn,DIRECT
+  - MATCH,🐟 漏网之鱼
+`;
+
+  return yaml;
+}
+
+function generate() {
+  try {
+    const yaml = buildYaml();
+    document.getElementById('output').textContent = yaml;
+    showToast('配置生成成功');
+  } catch (e) {
+    showToast(e.message, true);
+  }
+}
+
+function copyYaml() {
+  const text = document.getElementById('output').textContent;
+  if (!text || text.startsWith('点击')) {
+    showToast('请先生成配置', true);
+    return;
+  }
+  // 兼容性处理
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(
+      () => showToast('已复制到剪贴板'),
+      () => fallbackCopy(text)
+    );
+  } else {
+    fallbackCopy(text);
+  }
+}
+
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    document.execCommand('copy');
+    showToast('已复制到剪贴板');
+  } catch (e) {
+    showToast('复制失败，请手动选中', true);
+  }
+  document.body.removeChild(ta);
+}
+
+function downloadYaml() {
+  const text = document.getElementById('output').textContent;
+  if (!text || text.startsWith('点击')) {
+    showToast('请先生成配置', true);
+    return;
+  }
+  const blob = new Blob([text], { type: 'text/yaml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'flclash-chain.yaml';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('已下载 flclash-chain.yaml');
+}
+</script>
+</body>
+</html>
